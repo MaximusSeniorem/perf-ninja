@@ -1,12 +1,11 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.20)
 
-project(lab)
+find_package(OpenMP CONFIG)
 
-find_package(OpenMP REQUIRED)
-if (OPENMP_FOUND)
-    set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-    set (CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+if (OpenMP_CXX_FOUND)
+    add_perf_ninja_lab(
+    EXTRA_TARGETS OpenMP::OpenMP_CXX
+    )
+else()
+    message(WARNING "OpenMP not found, skipping false sharing lab")
 endif()
-
-string(REGEX MATCH "^(.*)[\\/]labs[\\/].*$" repo "${CMAKE_CURRENT_SOURCE_DIR}")
-include(${CMAKE_MATCH_1}/tools/labs.cmake)
