@@ -3,8 +3,25 @@
 ## How to set up the environment
 
 Here is the list of tools you *absolutely* have to install to build labs in this video course:
-* CMake 3.13
-* [Google benchmark](https://github.com/google/benchmark), you can also use the scripts in the [tools](tools) directory.
+* CMake 3.20
+* conan 2.x
+
+In order to setup the environment easily, we recommand to install uv and then install deps as follow:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv venv
+source .venv/bin/activate
+uv pip install cmake conan ninja
+```
+
+Conan requires to be setup as well:
+
+```bash
+conan profile detect
+echo "tools.cmake.cmaketoolchain:generator=Ninja" >> "$(conan config home)/global.conf"
+```
+
 
 Others are optional depending on your platform of choice. So far we support native builds on Windows and Linux. Check out the instructions specific to each platform ([Windows](QuickstartWindows.md)) ([Linux](QuickstartLinux.md)) ([MacOS](QuickstartMacOS.md)).
 
@@ -21,23 +38,24 @@ Every lab assignment has the following:
 
 We encourage you to work on the lab assignment first, without watching the summary video.
 
-Every lab can be built and run using the following commands:
+All labs can be built and run using the following commands:
 ```
-cmake -E make_directory build
-cd build
-cmake -DCMAKE_BUILD_TYPE=Release ..
-cmake --build . --config Release --parallel 8
-cmake --build . --target validateLab
-cmake --build . --target benchmarkLab
+conan build . -b missing
+cmake --build --preset conan-release --target misc.warmup.validateLab
+cmake --build --preset conan-release --target misc.warmup.benchmarkLab
 ```
 When you push changes to your private branch, it will automatically trigger a CI benchmarking job. More details about it are at the bottom of the page.
+
+> Warning: CI is currently not compatible with the refactor. Please run and compare result locally.
 
 ## Profiling
 
 To match assembly code back to the source in the profile, build your binaries with the debug information:
 ```
-cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_FLAGS="-g" -DCMAKE_CXX_FLAGS="-g" ..
+conan build . -b missing -s build_type=Debug
 ```
+
+Then use the preset `conan-debug` instead of `conan-release`
 
 Lab assignments are built on top of the Google Benchmark library, which by default performs a variable number of benchmark iterations. That makes it hard to compare the performance profiles of two runs since they will not do the same amount of work. You can see the same wall time even though the number of iterations is different. To fix the number of iterations, you can make the following changes:
 
@@ -101,18 +119,20 @@ Here are a few tips that will help you compare the results of your experiments a
     /path/to/benchmark/tools/compare.py benchmarks baseline.json solution.json
     ```
 
-2) Use the `check_speedup.py` script, which is inside the Performance Ninja repo (uses the `compare.py` script under the hood):
+2) Use the `check_speedup_run.py` script, which is inside the Performance Ninja repo (uses the `compare.py` script under the hood):
 
     ```
-    # 1. Put your solution under `#ifdef SOLUTION`:
+    # Setup new build tree using:
+    python3 ~/workspace/perf-ninja/tools/check_speedup_build.py
+    # 2. Put your solution under `#ifdef SOLUTION`:
       #ifdef SOLUTION
         // your solution
       #else
         // baseline version
       #endif
-    # 2. Run the script, which will build and run your solution against the baseline N times
+    # 3. Run the script, which will build and run your solution against the baseline N times
     cd build
-    python3 ~/workspace/perf-ninja/tools/check_speedup.py -lab_path ../ -num_runs 3
+    python3 ~/workspace/perf-ninja/tools/check_speedup_run.py --target_prefix misc.warmup
     ```
 
 ## Submission guidelines:
